@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0F1419" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="GroundTruth" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>GroundTruth — GT Mann</title>
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="app-title">Grand &amp; Fir</div>
+      <div class="app-subtitle">GroundTruth · <span id="today-date"></span></div>
+    </div>
+    <div class="header-right">
+      <button class="header-btn" id="export-btn" aria-label="Export CSV" title="Export CSV">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      </button>
+      <button class="header-btn" id="view-toggle-btn" aria-label="Toggle view">
+        <span id="view-label">Site</span>
+      </button>
+      <button class="user-chip" id="user-chip" aria-label="Switch user">
+        <span id="user-initials">--</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Stat strip (4-up) -->
+  <div class="stat-strip">
+    <div class="stat-card stat-good"><div class="stat-label">On track</div><div class="stat-value" id="stat-on-track">—</div></div>
+    <div class="stat-card stat-warn"><div class="stat-label">Slipping</div><div class="stat-value" id="stat-slipping">—</div></div>
+    <div class="stat-card stat-bad"><div class="stat-label">Blocked</div><div class="stat-value" id="stat-blocked">—</div></div>
+    <div class="stat-card"><div class="stat-label">Days slipped</div><div class="stat-value" id="stat-days-slipped">—</div></div>
+  </div>
+
+  <!-- Window selector chips -->
+  <div class="filter-row" id="filter-row">
+    <button class="chip active" data-window="all">All</button>
+    <button class="chip" data-window="3">Next 3 days</button>
+    <button class="chip" data-window="7">Next week</button>
+    <button class="chip" data-window="14">Next 2 weeks</button>
+    <button class="chip" data-flag="slipping">⚠️ Slipping</button>
+    <button class="chip" data-flag="blocked">🚫 Blocked</button>
+  </div>
+
+  <!-- Foreman board view -->
+  <main class="view foreman-view" id="foreman-view">
+    <div class="item-list" id="item-list">
+      <div class="empty-state">Loading…</div>
+    </div>
+  </main>
+
+  <!-- Office view -->
+  <main class="view office-view" id="office-view" style="display:none">
+    <div class="office-section">
+      <div class="office-section-title">Drift snapshot</div>
+      <div id="office-drift"></div>
+    </div>
+    <div class="office-section">
+      <div class="office-section-title">Timeline (next 21 days)</div>
+      <div class="gantt-wrap" id="gantt-wrap"></div>
+    </div>
+  </main>
+
+  <!-- Action bar -->
+  <div class="bottom-bar" id="bottom-bar">
+    <button class="primary-btn" id="checkin-btn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      <span>Daily check-in</span>
+    </button>
+    <button class="secondary-btn icon-only" id="add-btn" aria-label="Add item">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+    <button class="secondary-btn icon-only" id="import-btn" aria-label="Import CSV">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+    </button>
+  </div>
+
+  <!-- ─── Add / edit item sheet ─── -->
+  <div class="sheet-overlay" id="item-sheet">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <h2 id="item-sheet-title">Add schedule item</h2>
+        <p>Trade, dates, who's on it. Status defaults to planned.</p>
+      </div>
+      <label class="field-label">Task name *</label>
+      <input type="text" class="text-input" id="f-name" placeholder="e.g. L2 Drywall hang" />
+      <label class="field-label">Area</label>
+      <input type="text" class="text-input" id="f-area" placeholder="e.g. Units 201-208" />
+      <label class="field-label">Trade *</label>
+      <select class="text-input" id="f-trade"></select>
+      <label class="field-label">Sub (optional)</label>
+      <select class="text-input" id="f-sub"><option value="">— Unassigned —</option></select>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label class="field-label">Planned start *</label>
+          <input type="date" class="text-input" id="f-start" />
+        </div>
+        <div>
+          <label class="field-label">Planned end *</label>
+          <input type="date" class="text-input" id="f-end" />
+        </div>
+      </div>
+      <label class="field-label">Notes</label>
+      <textarea class="text-input" id="f-notes" placeholder="Dependencies, RFIs, anything that affects this"></textarea>
+      <div class="action-row" style="margin-top:18px">
+        <button class="secondary-btn" data-close="item-sheet">Cancel</button>
+        <button class="primary-btn" id="submit-item">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Item detail sheet ─── -->
+  <div class="sheet-overlay" id="detail-sheet">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div id="detail-content"></div>
+      <div class="status-grid" id="detail-status-grid"></div>
+      <textarea class="text-input" id="detail-notes" placeholder="Notes / blockers (visible to subs on update)"></textarea>
+      <div class="action-row" style="margin-top:12px">
+        <button class="secondary-btn" id="detail-delete" style="flex:0 0 44px;color:var(--danger-text)">✕</button>
+        <button class="secondary-btn" id="detail-edit">Edit dates</button>
+        <button class="primary-btn" id="detail-save">Save check-in</button>
+      </div>
+      <button class="cancel-btn" data-close="detail-sheet">Close</button>
+    </div>
+  </div>
+
+  <!-- ─── Daily check-in wizard ─── -->
+  <div class="sheet-overlay" id="wizard-sheet">
+    <div class="sheet wizard-sheet">
+      <div class="sheet-handle"></div>
+      <div class="wizard-progress"><div class="wizard-bar" id="wizard-bar"></div></div>
+      <div class="wizard-header">
+        <span id="wizard-step">1 of 1</span>
+        <button class="wizard-skip" id="wizard-skip">Skip ›</button>
+      </div>
+      <div id="wizard-content"></div>
+      <div class="status-grid" id="wizard-status-grid"></div>
+      <textarea class="text-input" id="wizard-notes" placeholder="Notes for this item (optional)"></textarea>
+      <div class="action-row" style="margin-top:14px">
+        <button class="secondary-btn" id="wizard-back">Back</button>
+        <button class="primary-btn" id="wizard-next">Next ›</button>
+      </div>
+      <button class="cancel-btn" data-close="wizard-sheet">End check-in</button>
+    </div>
+  </div>
+
+  <!-- ─── CSV import sheet ─── -->
+  <div class="sheet-overlay" id="import-sheet">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <h2>Import schedule</h2>
+        <p>Paste rows from your Excel/MS Project schedule. One item per line.</p>
+      </div>
+      <div class="info-card">
+        <strong>Format (tab or comma separated):</strong><br>
+        <code style="font-size:11px">Name, Area, Trade, Start (YYYY-MM-DD), End (YYYY-MM-DD)</code><br>
+        <strong style="margin-top:6px;display:inline-block">Example:</strong><br>
+        <code style="font-size:11px">L2 Drywall hang, Units 201-208, drywall, 2026-06-15, 2026-06-22</code>
+      </div>
+      <textarea class="text-input" id="import-text" placeholder="Paste rows here…" style="min-height:140px;font-family:var(--font-mono);font-size:12px"></textarea>
+      <div id="import-preview"></div>
+      <div class="action-row" style="margin-top:12px">
+        <button class="secondary-btn" data-close="import-sheet">Cancel</button>
+        <button class="primary-btn" id="import-preview-btn">Preview</button>
+        <button class="primary-btn success" id="import-save-btn" style="display:none">Save all</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── User picker ─── -->
+  <div class="sheet-overlay" id="user-sheet">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-header">
+        <h2>Who's on the phone?</h2>
+        <p>Your name shows on each check-in.</p>
+      </div>
+      <input type="text" class="text-input" id="quick-name" placeholder="Your name" />
+      <button class="primary-btn" id="save-name" style="width:100%;margin-top:8px">Save</button>
+    </div>
+  </div>
+
+  <!-- ─── Toast ─── -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
